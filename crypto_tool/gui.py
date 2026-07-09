@@ -34,6 +34,15 @@ from .cipher import (
     sm4_decrypt_cbc,
     sm4_encrypt_ecb,
     sm4_decrypt_ecb,
+    chacha20_encrypt,
+    chacha20_decrypt,
+    generate_ed25519_keypair,
+    ed25519_sign,
+    ed25519_verify,
+    serialize_ed25519_private_key,
+    serialize_ed25519_public_key,
+    load_ed25519_private_key_from_pem,
+    load_ed25519_public_key_from_pem,
     hash_data,
     sm3_hash,
     sm3_salted_hash,
@@ -295,7 +304,7 @@ class CryptoGUI:
         ttk.Label(ctrl_frame, text="Algorithm:").grid(row=0, column=0, sticky="w", padx=(0, 5), pady=2)
         self._sym_algo = tk.StringVar(value="SM4-ECB")
         algo_combo = ttk.Combobox(ctrl_frame, textvariable=self._sym_algo,
-                                  values=["AES-GCM", "AES-CBC", "SM4-CBC", "SM4-ECB"],
+                                  values=["AES-GCM", "AES-CBC", "SM4-CBC", "SM4-ECB", "ChaCha20"],
                                   state="readonly", width=12)
         algo_combo.grid(row=0, column=1, sticky="w", padx=(0, 15), pady=2)
         self._sym_use_pwd = tk.BooleanVar(value=False)
@@ -372,6 +381,9 @@ class CryptoGUI:
         if algo.startswith("SM4"):
             key = generate_sm4_key()
             self._sym_key_var.set(to_hex(key))
+        elif algo == "ChaCha20":
+            key = generate_aes_key(256)  # ChaCha20 uses 256-bit key
+            self._sym_key_var.set(to_base64(key))
         else:  # AES
             key = generate_aes_key(256)
             self._sym_key_var.set(to_base64(key))
@@ -450,7 +462,7 @@ class CryptoGUI:
     def _encrypt_line(self, algo: str, data: bytes, key: bytes) -> bytes:
         """Encrypt a single block of data with the selected algorithm.
 
-        Returns raw packaged bytes (iv + [tag] + ciphertext).
+        Returns raw packaged bytes (nonce/iv + [tag] + ciphertext).
         """
         if algo == "AES-GCM":
             iv, ct, tag = aes_encrypt_gcm(data, key)
@@ -458,6 +470,9 @@ class CryptoGUI:
         elif algo == "AES-CBC":
             iv, ct = aes_encrypt_cbc(data, key)
             return iv + ct
+        elif algo == "ChaCha20":
+            nonce, ct, tag = chacha20_encrypt(data, key)
+            return nonce + tag + ct
         elif algo == "SM4-CBC":
             iv, ct = sm4_encrypt_cbc(data, key)
             return iv + ct
@@ -574,6 +589,11 @@ class CryptoGUI:
         elif algo == "AES-CBC":
             iv, ct = data[:16], data[16:]
             return aes_decrypt_cbc(iv, ct, key)
+        elif algo == "ChaCha20":
+            if len(data) < 28:
+                raise ValueError("Ciphertext too short for ChaCha20")
+            nonce, tag, ct = data[:12], data[12:28], data[28:]
+            return chacha20_decrypt(nonce, ct, tag, key)
         elif algo == "SM4-CBC":
             iv, ct = data[:16], data[16:]
             return sm4_decrypt_cbc(iv, ct, key)
@@ -634,8 +654,8 @@ class CryptoGUI:
         ttk.Label(ctrl_frame, text="Algorithm:").grid(row=0, column=0, sticky="w", padx=(0, 5))
         self._asym_algo = tk.StringVar(value="RSA")
         ttk.Combobox(ctrl_frame, textvariable=self._asym_algo,
-                     values=["RSA", "SM2"], state="readonly",
-                     width=8).grid(row=0, column=1, sticky="w", padx=(0, 15))
+                     values=["RSA", "SM2", "Ed25519"], state="readonly",
+                     width=10).grid(row=0, column=1, sticky="w", padx=(0, 15))
 
         # Key rows
         key_frame = ttk.Frame(tab)
@@ -737,7 +757,7 @@ class CryptoGUI:
                 self._asym_pub_var.set(pub_path)
 
             self._set_status(f"Generated RSA-2048 key pair")
-        else:  # SM2
+        elif algo == "SM2":
             priv_hex, pub_hex = generate_sm2_keypair()
             priv_pem, pub_pem = sm2_keypair_to_pem(priv_hex, pub_hex)
 
@@ -758,6 +778,28 @@ class CryptoGUI:
                 self._asym_pub_var.set(pub_path)
 
             self._set_status(f"Generated SM2 key pair")
+        else:  # Ed25519
+            priv, pub = generate_ed25519_keypair()
+            priv_pem = serialize_ed25519_private_key(priv)
+            pub_pem = serialize_ed25519_public_key(pub)
+
+            priv_path = filedialog.asksaveasfilename(
+                title="Save Ed25519 Private Key", defaultextension=".pem",
+                filetypes=[("PEM files", "*.pem"), ("All Files", "*.*")])
+            if priv_path:
+                with open(priv_path, "wb") as f:
+                    f.write(priv_pem)
+                self._asym_priv_var.set(priv_path)
+
+            pub_path = filedialog.asksaveasfilename(
+                title="Save Ed25519 Public Key", defaultextension=".pem",
+                filetypes=[("PEM files", "*.pem"), ("All Files", "*.*")])
+            if pub_path:
+                with open(pub_path, "wb") as f:
+                    f.write(pub_pem)
+                self._asym_pub_var.set(pub_path)
+
+            self._set_status(f"Generated Ed25519 key pair")
 
     def _load_pub_key(self):
         """Load the public key from the configured file."""
@@ -786,10 +828,14 @@ class CryptoGUI:
                 with open(path, "rb") as f:
                     pk = load_public_key_from_pem(f.read())
                 ct = rsa_encrypt(input_data, pk)
-            else:
+            elif algo == "SM2":
                 with open(path, "r") as f:
                     pub_hex = load_sm2_public_key_from_pem(f.read())
                 ct = sm2_encrypt(input_data, pub_hex)
+            else:  # Ed25519 is signature-only
+                messagebox.showwarning("Not Supported",
+                                       "Ed25519 is signature-only, cannot encrypt.")
+                return
 
             out = to_hex(ct) if self._asym_out_fmt.get() == "hex" else to_base64(ct)
             self._asym_output.delete("1.0", "end")
@@ -816,10 +862,14 @@ class CryptoGUI:
                 with open(path, "rb") as f:
                     sk = load_private_key_from_pem(f.read())
                 pt = rsa_decrypt(ct, sk)
-            else:
+            elif algo == "SM2":
                 with open(path, "r") as f:
                     priv_hex = load_sm2_private_key_from_pem(f.read())
                 pt = sm2_decrypt(ct, priv_hex)
+            else:
+                messagebox.showwarning("Not Supported",
+                                       "Ed25519 is signature-only, cannot decrypt.")
+                return
 
             try:
                 text_out = pt.decode("utf-8")
@@ -844,10 +894,14 @@ class CryptoGUI:
                     sk = load_private_key_from_pem(f.read())
                 sig = rsa_sign(input_data, sk)
                 out = to_base64(sig)
+            elif algo == "Ed25519":
+                with open(path, "rb") as f:
+                    sk = load_ed25519_private_key_from_pem(f.read())
+                sig = ed25519_sign(input_data, sk)
+                out = to_base64(sig)
             else:
                 with open(path, "r") as f:
                     priv_hex = load_sm2_private_key_from_pem(f.read())
-                # Also try to load public key for SM2
                 pub_hex = ""
                 pub_path = self._asym_pub_var.get().strip()
                 if pub_path and os.path.isfile(pub_path):
@@ -878,6 +932,11 @@ class CryptoGUI:
                     pk = load_public_key_from_pem(f.read())
                 sig = from_base64(sig_text)
                 valid = rsa_verify(input_data, sig, pk)
+            elif algo == "Ed25519":
+                with open(path, "rb") as f:
+                    pk = load_ed25519_public_key_from_pem(f.read())
+                sig = from_base64(sig_text)
+                valid = ed25519_verify(input_data, sig, pk)
             else:
                 with open(path, "r") as f:
                     pub_hex = load_sm2_public_key_from_pem(f.read())
@@ -1038,11 +1097,11 @@ class CryptoGUI:
         ctrl_frame = ttk.Frame(tab)
         ctrl_frame.pack(fill="x", padx=5, pady=5)
 
-        ttk.Label(ctrl_frame, text="Operation:").grid(row=0, column=0, sticky="w", padx=(0, 5))
-        self._enc_op = tk.StringVar(value="Base64 Encode")
+        ttk.Label(ctrl_frame, text="Format:").grid(row=0, column=0, sticky="w", padx=(0, 5))
+        self._enc_op = tk.StringVar(value="Base64")
         ttk.Combobox(ctrl_frame, textvariable=self._enc_op,
-                     values=["Base64 Encode", "Base64 Decode", "Hex Encode", "Hex Decode"],
-                     state="readonly", width=16).grid(row=0, column=1, sticky="w")
+                     values=["Base64", "Hex"],
+                     state="readonly", width=10).grid(row=0, column=1, sticky="w")
 
         # Input
         in_frame, self._enc_input = self._make_input_frame(tab, "Input", height=10)
@@ -1052,10 +1111,16 @@ class CryptoGUI:
         in_toolbar.pack(fill="x", padx=5)
         ttk.Button(in_toolbar, text="Open File",
                    command=lambda: self._load_file_content(self._enc_input)).pack(side="left", padx=2)
-        ttk.Button(in_toolbar, text="Paste & Convert",
-                   command=self._encode_convert).pack(side="left", padx=2)
-        ttk.Button(in_toolbar, text="Clear",
+        ttk.Button(in_toolbar, text="Clear Input",
                    command=lambda: self._clear_text(self._enc_input)).pack(side="left", padx=2)
+
+        # Encode / Decode buttons
+        btn_frame = ttk.Frame(tab)
+        btn_frame.pack(fill="x", padx=5, pady=5)
+        ttk.Button(btn_frame, text="▶ Encode",
+                   command=self._encode_action).pack(side="left", padx=3)
+        ttk.Button(btn_frame, text="▶ Decode",
+                   command=self._decode_action).pack(side="left", padx=3)
 
         # Output
         out_frame, self._enc_output = self._make_input_frame(tab, "Output", height=10)
@@ -1072,39 +1137,51 @@ class CryptoGUI:
         ttk.Button(out_toolbar, text="Clear Both",
                    command=lambda: self._clear_text(self._enc_input, self._enc_output)).pack(side="left", padx=2)
 
-    def _encode_convert(self):
-        """Perform encoding or decoding operation."""
+    def _encode_action(self):
+        """Encode input in the selected format."""
         text = self._enc_input.get("1.0", "end-1c").strip()
         if not text:
-            messagebox.showwarning("Input Required", "Please enter data.")
+            messagebox.showwarning("Input Required", "Please enter data to encode.")
             return
 
-        op = self._enc_op.get()
+        fmt = self._enc_op.get()
         try:
-            if op == "Base64 Encode":
+            if fmt.startswith("Base64"):
                 result = to_base64(text.encode("utf-8"))
-            elif op == "Base64 Decode":
-                decoded = from_base64(text)
-                try:
-                    result = decoded.decode("utf-8")
-                except UnicodeDecodeError:
-                    result = f"[Binary data — {len(decoded)} bytes]\n" + to_hex(decoded)
-            elif op == "Hex Encode":
-                result = to_hex(text.encode("utf-8"))
-            elif op == "Hex Decode":
-                decoded = from_hex(text)
-                try:
-                    result = decoded.decode("utf-8")
-                except UnicodeDecodeError:
-                    result = f"[Binary data — {len(decoded)} bytes]\n" + to_base64(decoded)
             else:
-                return
-
-            self._enc_output.delete("1.0", "end")
-            self._enc_output.insert("1.0", result)
-            self._set_status(f"✓ {op}")
+                result = to_hex(text.encode("utf-8"))
         except Exception as e:
-            messagebox.showerror("Encode Error", f"{op} failed: {e}")
+            messagebox.showerror("Encode Error", str(e))
+            return
+
+        self._enc_output.delete("1.0", "end")
+        self._enc_output.insert("1.0", result)
+        self._set_status(f"✓ {fmt}")
+
+    def _decode_action(self):
+        """Decode input from the selected format."""
+        text = self._enc_input.get("1.0", "end-1c").strip()
+        if not text:
+            messagebox.showwarning("Input Required", "Please enter data to decode.")
+            return
+
+        fmt = self._enc_op.get()
+        try:
+            if fmt.startswith("Base64"):
+                decoded = from_base64(text)
+            else:
+                decoded = from_hex(text)
+            try:
+                result = decoded.decode("utf-8")
+            except UnicodeDecodeError:
+                result = f"[Binary data — {len(decoded)} bytes]\n" + to_hex(decoded)
+        except Exception as e:
+            messagebox.showerror("Decode Error", str(e))
+            return
+
+        self._enc_output.delete("1.0", "end")
+        self._enc_output.insert("1.0", result)
+        self._set_status(f"✓ {fmt}")
 
     def _enc_swap(self):
         """Swap input and output in the encoding tab."""
@@ -1117,8 +1194,24 @@ class CryptoGUI:
         self._set_status("Swapped input/output")
 
 
+def _enable_high_dpi():
+    """Enable high-DPI awareness on Windows for crisp rendering."""
+    if sys.platform == "win32":
+        try:
+            from ctypes import windll
+            # Windows 10 1703+: Per-Monitor DPI v2
+            windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            try:
+                from ctypes import windll
+                windll.shcore.SetProcessDpiAwareness(1)  # System DPI
+            except Exception:
+                pass
+
+
 def main():
     """Entry point for the GUI application."""
+    _enable_high_dpi()
     root = tk.Tk()
     app = CryptoGUI(root)
     root.mainloop()

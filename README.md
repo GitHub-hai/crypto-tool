@@ -183,8 +183,6 @@ pip install pyinstaller
 # Single-file executable (no console window)
 pyinstaller --onefile --windowed ^
     --name crypto-tool ^
-    --add-data "crypto_tool;crypto_tool" ^
-    -m crypto_tool.gui:main ^
     crypto_tool/gui.py
 
 # Output: dist/crypto-tool.exe
@@ -196,10 +194,10 @@ With an icon (optional):
 pyinstaller --onefile --windowed ^
     --name crypto-tool ^
     --icon icon.ico ^
-    --add-data "crypto_tool;crypto_tool" ^
-    -m crypto_tool.gui:main ^
     crypto_tool/gui.py
 ```
+
+> **Note**: PyInstaller automatically follows Python imports to bundle the `crypto_tool` package. No `--add-data` is needed for `.py` modules.
 
 ### Linux
 
@@ -207,8 +205,6 @@ pyinstaller --onefile --windowed ^
 # Single-file executable
 pyinstaller --onefile \
     --name crypto-tool \
-    --add-data "crypto_tool:crypto_tool" \
-    -m crypto_tool.gui:main \
     crypto_tool/gui.py
 
 # Output: dist/crypto-tool
@@ -219,22 +215,18 @@ pyinstaller --onefile \
 ```bash
 pyinstaller --onefile --windowed \
     --name crypto-tool \
-    --add-data "crypto_tool:crypto_tool" \
-    -m crypto_tool.gui:main \
     crypto_tool/gui.py
 
-# Output: dist/crypto-tool
+# Output: dist/crypto-tool.app (bundle) + dist/crypto-tool (binary)
 ```
 
 ### CLI Standalone (all platforms)
 
-To package the CLI instead of the GUI, omit `--windowed` and target `cli.py`:
+To package the CLI instead of the GUI, omit `--windowed`:
 
 ```bash
 pyinstaller --onefile \
     --name crypto-tool-cli \
-    --add-data "crypto_tool:crypto_tool" \
-    -m crypto_tool.cli:main \
     crypto_tool/cli.py
 ```
 
@@ -254,9 +246,10 @@ ls dist/crypto-tool
 
 | Issue | Solution |
 |-------|----------|
-| `ModuleNotFoundError: crypto_tool` | Ensure `--add-data` copies the `crypto_tool` package into the bundle |
-| SM2 not working | Verify `gmssl` is installed before building: `pip install gmssl>=3.2.0` |
-| Large binary (>50MB) | Normal — PyInstaller bundles Python and all dependencies |
+| `ModuleNotFoundError: crypto_tool` | Run `pip install -e .` first, then rebuild. PyInstaller needs the package importable. |
+| SM2 not working in exe | Add `--hidden-import gmssl` to ensure it's bundled |
+| Large binary (~30-50 MB) | Normal — PyInstaller bundles Python and all dependencies |
+| `FileNotFoundError: ...gui:main` | `-m` is for Windows manifests, not module entry points. Just pass the script file directly. |
 
 ## Security Notes
 

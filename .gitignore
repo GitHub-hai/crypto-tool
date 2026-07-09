@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+.eggs/
+*.manifest
+*.spec
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+*.coverage.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Crypto tool specific
+# WARNING: Never commit real keys or encrypted data!
+*.enc
+*.key
+*.pem
+!test/data/*.pem
+*.sig
+!test/data/*.sig
+secrets/
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Distribution
+*.tar.gz
+*.zip
+
+# Docs build
+docs/_build/
+
+# Environment
+.env.local
+.env.*.local

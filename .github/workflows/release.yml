@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -e .
+
+    - name: Build binary
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          pyinstaller --onefile --windowed --name crypto-tool run_gui.py
+          echo "ASSET=dist/crypto-tool.exe" >> $GITHUB_ENV
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          pyinstaller --onefile --windowed --name crypto-tool run_gui.py
+          echo "ASSET=dist/crypto-tool" >> $GITHUB_ENV
+        else
+          pyinstaller --onefile --name crypto-tool run_gui.py
+          echo "ASSET=dist/crypto-tool" >> $GITHUB_ENV
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: crypto-tool-${{ matrix.os }}
+        path: ${{ env.ASSET }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: crypto-tool-*
+        path: artifacts
+        merge-multiple: false
+
+    - name: Prepare files
+      run: |
+        mkdir dist
+        cp artifacts/crypto-tool-windows-latest/crypto-tool.exe dist/
+        cp artifacts/crypto-tool-ubuntu-latest/crypto-tool dist/crypto-tool-linux
+        cp artifacts/crypto-tool-macos-latest/crypto-tool dist/crypto-tool-macos
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        generate_release_notes: true

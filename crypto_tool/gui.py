@@ -63,7 +63,7 @@ class CryptoGUI:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Crypto Tool - 加解密工具箱")
-        self.root.geometry("1002x850")
+        self.root.geometry("960x680")
         self.root.minsize(800, 600)
 
         self._setup_style()
@@ -71,18 +71,50 @@ class CryptoGUI:
         self._set_status("Ready")
 
     def _show_about(self):
-        """Show About dialog."""
-        messagebox.showinfo(
-            "About Crypto Tool",
-            "Crypto Tool — 加解密工具箱\n\n"
+        """Show About dialog with clickable GitHub link."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("About Crypto Tool")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        frame = ttk.Frame(dialog, padding=20)
+        frame.pack()
+
+        ttk.Label(frame, text="Crypto Tool — 加解密工具箱",
+                  font=("", 12, "bold")).pack(pady=(0, 10))
+
+        info = (
             "A versatile encryption/decryption utility supporting\n"
             "AES, SM2, SM3, SM4, RSA, SHA, HMAC, and more.\n\n"
-            "Author:       WU GUOHAI\n"
-            "AI Model:     DeepSeek\n"
-            "AI Tool:      Claude Code\n"
-            "License:      MIT\n"
-            "GitHub:       https://github.com/GitHub-hai/crypto-tool",
+            "Author:   WU GUOHAI\n"
+            "AI Model: DeepSeek\n"
+            "AI Tool:  Claude Code\n"
+            "License:  MIT"
         )
+        ttk.Label(frame, text=info, justify="left").pack(pady=(0, 10))
+
+        # Clickable GitHub link
+        github_url = "https://github.com/GitHub-hai/crypto-tool"
+        link = ttk.Label(
+            frame, text=github_url,
+            foreground="#0366d6", cursor="hand2",
+            font=("", 9, "underline"),
+        )
+        link.pack()
+        link.bind("<Button-1>", lambda e: webbrowser.open(github_url))
+
+        ttk.Button(frame, text="OK", command=dialog.destroy,
+                   width=10).pack(pady=(15, 0))
+
+        # Center on parent
+        dialog.update_idletasks()
+        w, h = dialog.winfo_width(), dialog.winfo_height()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        px, py = self.root.winfo_x(), self.root.winfo_y()
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
+        dialog.geometry(f"+{x}+{y}")
 
     def _setup_style(self):
         """Configure ttk styles."""
@@ -122,11 +154,11 @@ class CryptoGUI:
         github_url = "https://github.com/GitHub-hai/crypto-tool"
         link_btn = ttk.Label(
             status_frame,
-            text="GitHub: " + github_url,
+            text="  GitHub: " + github_url + "  ",
             foreground="#0366d6", cursor="hand2",
             font=("Consolas", 8, "underline"),
         )
-        link_btn.pack(side="left", padx=10)
+        link_btn.pack(side="left", padx=5)
         link_btn.bind("<Button-1>", lambda e: webbrowser.open(github_url))
 
         ttk.Button(status_frame, text="About", command=self._show_about,

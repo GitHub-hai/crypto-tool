@@ -63,7 +63,7 @@ class CryptoGUI:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Crypto Tool - 加解密工具箱")
-        self.root.geometry("960x720")
+        self.root.geometry("1002x850")
         self.root.minsize(800, 600)
 
         self._setup_style()

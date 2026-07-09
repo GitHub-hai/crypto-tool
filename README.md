@@ -167,6 +167,97 @@ pytest -v
 pytest --cov=crypto_tool
 ```
 
+## Building Standalone Executables
+
+The GUI (`crypto-tool-gui`) can be packaged into a single-file executable for distribution without requiring Python to be installed on the target machine.
+
+### Prerequisites
+
+```bash
+pip install pyinstaller
+```
+
+### Windows (.exe)
+
+```bash
+# Single-file executable (no console window)
+pyinstaller --onefile --windowed ^
+    --name crypto-tool ^
+    --add-data "crypto_tool;crypto_tool" ^
+    -m crypto_tool.gui:main ^
+    crypto_tool/gui.py
+
+# Output: dist/crypto-tool.exe
+```
+
+With an icon (optional):
+
+```bash
+pyinstaller --onefile --windowed ^
+    --name crypto-tool ^
+    --icon icon.ico ^
+    --add-data "crypto_tool;crypto_tool" ^
+    -m crypto_tool.gui:main ^
+    crypto_tool/gui.py
+```
+
+### Linux
+
+```bash
+# Single-file executable
+pyinstaller --onefile \
+    --name crypto-tool \
+    --add-data "crypto_tool:crypto_tool" \
+    -m crypto_tool.gui:main \
+    crypto_tool/gui.py
+
+# Output: dist/crypto-tool
+```
+
+### macOS
+
+```bash
+pyinstaller --onefile --windowed \
+    --name crypto-tool \
+    --add-data "crypto_tool:crypto_tool" \
+    -m crypto_tool.gui:main \
+    crypto_tool/gui.py
+
+# Output: dist/crypto-tool
+```
+
+### CLI Standalone (all platforms)
+
+To package the CLI instead of the GUI, omit `--windowed` and target `cli.py`:
+
+```bash
+pyinstaller --onefile \
+    --name crypto-tool-cli \
+    --add-data "crypto_tool:crypto_tool" \
+    -m crypto_tool.cli:main \
+    crypto_tool/cli.py
+```
+
+### Output Location
+
+PyInstaller places executables in `dist/`. The `dist/` directory is already in `.gitignore` — build artifacts are never committed.
+
+```bash
+# Windows
+ls dist/crypto-tool.exe
+
+# Linux / macOS
+ls dist/crypto-tool
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `ModuleNotFoundError: crypto_tool` | Ensure `--add-data` copies the `crypto_tool` package into the bundle |
+| SM2 not working | Verify `gmssl` is installed before building: `pip install gmssl>=3.2.0` |
+| Large binary (>50MB) | Normal — PyInstaller bundles Python and all dependencies |
+
 ## Security Notes
 
 - This tool uses industry-standard libraries: `cryptography`, `gmssl`

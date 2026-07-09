@@ -113,12 +113,24 @@ def _resolve_output(output_file, data, default_ext=".out"):
 
 
 @click.group()
-@click.version_option(package_name="crypto-tool")
+@click.version_option(
+    version="0.2.0",
+    message=(
+        "Crypto Tool %(version)s\n"
+        "Author:   WU GUOHAI\n"
+        "AI Model: DeepSeek\n"
+        "AI Tool:  Claude Code\n"
+        "License:  MIT\n"
+        "GitHub:   https://github.com/GitHub-hai/crypto-tool"
+    ),
+)
 def main():
     """Crypto Tool — Encrypt, decrypt, hash, and sign data.
 
     Supports: AES, SM4 (symmetric), RSA, SM2 (asymmetric),
     SM3, SHA-256/384/512, MD5 (hashing), Base64, Hex (encoding).
+
+    Author: WU GUOHAI | GitHub: https://github.com/GitHub-hai/crypto-tool
 
     \b
     Input can be provided via:

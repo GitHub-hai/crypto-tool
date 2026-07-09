@@ -69,6 +69,20 @@ class CryptoGUI:
         self._create_widgets()
         self._set_status("Ready")
 
+    def _show_about(self):
+        """Show About dialog."""
+        messagebox.showinfo(
+            "About Crypto Tool",
+            "Crypto Tool — 加解密工具箱\n\n"
+            "A versatile encryption/decryption utility supporting\n"
+            "AES, SM2, SM3, SM4, RSA, SHA, HMAC, and more.\n\n"
+            "Author:       WU GUOHAI\n"
+            "AI Model:     DeepSeek\n"
+            "AI Tool:      Claude Code\n"
+            "License:      MIT\n"
+            "GitHub:       https://github.com/GitHub-hai/crypto-tool",
+        )
+
     def _setup_style(self):
         """Configure ttk styles."""
         self.style = ttk.Style()
@@ -95,10 +109,16 @@ class CryptoGUI:
         self._create_encode_tab()
 
         # Status bar
+        status_frame = ttk.Frame(self.root)
+        status_frame.pack(fill="x", side="bottom")
+
         self._status_var = tk.StringVar(value="Ready")
-        status_bar = ttk.Label(self.root, textvariable=self._status_var,
+        status_bar = ttk.Label(status_frame, textvariable=self._status_var,
                                style="Status.TLabel")
-        status_bar.pack(fill="x", side="bottom")
+        status_bar.pack(side="left", fill="x", expand=True)
+
+        ttk.Button(status_frame, text="About", command=self._show_about,
+                   width=8).pack(side="right", padx=3, pady=1)
 
     # ── Helper Methods ──────────────────────────────────────────────────
 

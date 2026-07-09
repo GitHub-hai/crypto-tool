@@ -6,6 +6,9 @@ A versatile encryption/decryption utility for Python with both CLI and GUI inter
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+> **Author:** WU GUOHAI · **AI Model:** DeepSeek · **AI Tool:** Claude Code
+> **GitHub:** [https://github.com/GitHub-hai/crypto-tool](https://github.com/GitHub-hai/crypto-tool)
+
 ## Features
 
 ### Algorithms

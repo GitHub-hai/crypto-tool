@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
-    {name = "Developer", email = "dev@example.com"}
+    {name = "WU GUOHAI", email = "GitHub-hai@users.noreply.github.com"}
 ]
 keywords = ["cryptography", "encryption", "decryption", "sm2", "sm3", "sm4", "aes", "rsa", "hash"]
 classifiers = [

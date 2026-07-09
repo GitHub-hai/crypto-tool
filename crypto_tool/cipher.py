@@ -16,6 +16,7 @@ from typing import Tuple, Optional
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.asymmetric import rsa, padding as asym_padding
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
@@ -371,4 +372,96 @@ def load_private_key_from_pem(pem_data: bytes) -> rsa.RSAPrivateKey:
 
 def load_public_key_from_pem(pem_data: bytes) -> rsa.RSAPublicKey:
     """Load an RSA public key from PEM bytes."""
+    return load_pem_public_key(pem_data, backend=default_backend())
+
+
+# ── ChaCha20-Poly1305 (Authenticated Stream Cipher) ─────────────────────
+
+def chacha20_encrypt(plaintext: bytes, key: bytes, aad: bytes = b"") -> Tuple[bytes, bytes, bytes]:
+    """Encrypt data using ChaCha20-Poly1305 (IETF variant).
+
+    Args:
+        plaintext: Data to encrypt.
+        key: 256-bit (32-byte) key.
+        aad: Additional authenticated data.
+
+    Returns:
+        Tuple of (nonce, ciphertext, tag).
+    """
+    nonce = os.urandom(12)
+    algorithm = algorithms.ChaCha20Poly1305(key)
+    cipher = Cipher(algorithm, mode=None, backend=default_backend())
+    encryptor = cipher.encryptor()
+    encryptor.authenticate_additional_data(aad)
+    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+    return nonce, ciphertext, encryptor.tag
+
+
+def chacha20_decrypt(nonce: bytes, ciphertext: bytes, tag: bytes, key: bytes,
+                     aad: bytes = b"") -> Optional[bytes]:
+    """Decrypt data using ChaCha20-Poly1305.
+
+    Returns None if authentication fails.
+    """
+    try:
+        algorithm = algorithms.ChaCha20Poly1305(key)
+        cipher = Cipher(algorithm, mode=None, backend=default_backend())
+        decryptor = cipher.decryptor()
+        decryptor.authenticate_additional_data(aad)
+        return decryptor.update(ciphertext) + decryptor.finalize()
+    except InvalidTag:
+        return None
+
+
+# ── Ed25519 (Modern Elliptic-Curve Signatures) ──────────────────────────
+
+def generate_ed25519_keypair() -> Tuple[ed25519.Ed25519PrivateKey, ed25519.Ed25519PublicKey]:
+    """Generate an Ed25519 key pair.
+
+    Returns:
+        Tuple of (private_key, public_key).
+    """
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    return private_key, private_key.public_key()
+
+
+def ed25519_sign(data: bytes, private_key: ed25519.Ed25519PrivateKey) -> bytes:
+    """Sign data using Ed25519."""
+    return private_key.sign(data)
+
+
+def ed25519_verify(data: bytes, signature: bytes,
+                   public_key: ed25519.Ed25519PublicKey) -> bool:
+    """Verify an Ed25519 signature."""
+    try:
+        public_key.verify(signature, data)
+        return True
+    except InvalidSignature:
+        return False
+
+
+def serialize_ed25519_private_key(key: ed25519.Ed25519PrivateKey) -> bytes:
+    """Serialize an Ed25519 private key to PEM bytes."""
+    return key.private_bytes(
+        encoding=Encoding.PEM,
+        format=PrivateFormat.PKCS8,
+        encryption_algorithm=NoEncryption(),
+    )
+
+
+def serialize_ed25519_public_key(key: ed25519.Ed25519PublicKey) -> bytes:
+    """Serialize an Ed25519 public key to PEM bytes."""
+    return key.public_bytes(
+        encoding=Encoding.PEM,
+        format=PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
+def load_ed25519_private_key_from_pem(pem_data: bytes) -> ed25519.Ed25519PrivateKey:
+    """Load an Ed25519 private key from PEM bytes."""
+    return load_pem_private_key(pem_data, password=None, backend=default_backend())
+
+
+def load_ed25519_public_key_from_pem(pem_data: bytes) -> ed25519.Ed25519PublicKey:
+    """Load an Ed25519 public key from PEM bytes."""
     return load_pem_public_key(pem_data, backend=default_backend())

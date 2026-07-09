@@ -8,6 +8,7 @@ Features multi-line text input/output, file operations, and clipboard support.
 
 import os
 import sys
+import webbrowser
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog, simpledialog
 from typing import Optional
@@ -116,6 +117,17 @@ class CryptoGUI:
         status_bar = ttk.Label(status_frame, textvariable=self._status_var,
                                style="Status.TLabel")
         status_bar.pack(side="left", fill="x", expand=True)
+
+        # GitHub link (clickable)
+        github_url = "https://github.com/GitHub-hai/crypto-tool"
+        link_btn = ttk.Label(
+            status_frame,
+            text="GitHub: " + github_url,
+            foreground="#0366d6", cursor="hand2",
+            font=("Consolas", 8, "underline"),
+        )
+        link_btn.pack(side="left", padx=10)
+        link_btn.bind("<Button-1>", lambda e: webbrowser.open(github_url))
 
         ttk.Button(status_frame, text="About", command=self._show_about,
                    width=8).pack(side="right", padx=3, pady=1)

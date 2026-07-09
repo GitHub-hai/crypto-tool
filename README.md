@@ -217,12 +217,54 @@ pyinstaller --onefile \
 
 ### macOS
 
+> **ARM (Apple Silicon) compatibility**: PyInstaller produces a binary for the
+> architecture it runs on. Build on Apple Silicon (M1/M2/M3) → arm64 binary.
+> Build on Intel Mac → x86_64 binary (runs on Apple Silicon via Rosetta 2).
+> Cross-architecture builds are **not** supported — build on the same chip as the target.
+
 ```bash
+# Build (on the target Mac architecture)
 pyinstaller --onefile --windowed \
     --name crypto-tool \
     run_gui.py
 
-# Output: dist/crypto-tool.app (bundle) + dist/crypto-tool (binary)
+# Outputs:
+#   dist/crypto-tool.app  — double-click to launch
+#   dist/crypto-tool      — raw binary (terminal launch)
+```
+
+#### First-launch issue (Gatekeeper)
+
+macOS blocks unsigned apps downloaded from the internet. If the `.app` won't open:
+
+```bash
+# Remove quarantine flag (user runs this after downloading)
+xattr -cr crypto-tool.app
+```
+
+Or right-click the `.app` → **Open** → confirm the dialog.
+
+#### Build for distribution
+
+```bash
+# Ad-hoc sign (local testing)
+codesign --force --deep --sign - dist/crypto-tool.app
+
+# Notarization-ready signed build (requires Apple Developer account)
+codesign --force --options runtime --deep --sign "Developer ID Application: ..." dist/crypto-tool.app
+```
+
+#### Debugging build failures
+
+```bash
+# Build in verbose mode to see import errors
+pyinstaller --onefile --windowed --log-level DEBUG --name crypto-tool run_gui.py
+
+# If tkinter is missing, install python-tk via Homebrew
+brew install python-tk@3.13
+
+# Ensure gmssl is bundled
+pyinstaller --onefile --windowed --hidden-import gmssl --name crypto-tool run_gui.py
 ```
 
 ### CLI Standalone (all platforms)
@@ -249,12 +291,14 @@ ls dist/crypto-tool
 
 ### Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `ModuleNotFoundError: crypto_tool` | Run `pip install -e .` first, then rebuild. PyInstaller needs the package importable. |
-| SM2 not working in exe | Add `--hidden-import gmssl` to ensure it's bundled |
-| Large binary (~30-50 MB) | Normal — PyInstaller bundles Python and all dependencies |
-| `FileNotFoundError: ...gui:main` | `-m` is for Windows manifests, not module entry points. Just pass the script file directly. |
+| Issue | Platform | Solution |
+|-------|----------|----------|
+| `ModuleNotFoundError: crypto_tool` | All | Run `pip install -e .` first, then rebuild |
+| SM2 not working in exe | All | Add `--hidden-import gmssl` |
+| `.app` won't open / "damaged" | macOS | Run `xattr -cr crypto-tool.app` or right-click → Open |
+| tkinter missing at build time | macOS | `brew install python-tk@3.13` |
+| Binary wrong architecture | macOS | Build on the same chip as target. Intel Mac → x86_64, Apple Silicon → arm64 |
+| Large binary (~30-50 MB) | All | Normal — PyInstaller bundles Python + all dependencies |
 
 ## Security Notes
 

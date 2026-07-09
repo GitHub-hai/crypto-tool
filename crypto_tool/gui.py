@@ -81,7 +81,9 @@ class CryptoGUI:
         frame = ttk.Frame(dialog, padding=20)
         frame.pack()
 
-        ttk.Label(frame, text="Crypto Tool — 加解密工具箱",
+        from crypto_tool import __version__
+
+        ttk.Label(frame, text=f"Crypto Tool — 加解密工具箱  v{__version__}",
                   font=("", 12, "bold")).pack(pady=(0, 10))
 
         info = (
@@ -131,7 +133,30 @@ class CryptoGUI:
 
     def _create_widgets(self):
         """Build the main UI structure."""
-        # Notebook (tabs)
+        # Status bar — pack first to reserve bottom space
+        status_frame = ttk.Frame(self.root)
+        status_frame.pack(fill="x", side="bottom")
+
+        self._status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(status_frame, textvariable=self._status_var,
+                               relief="sunken", anchor="w", padding=(5, 2))
+        status_bar.pack(side="left", fill="x", expand=True)
+
+        # GitHub link + About — right side of status bar
+        github_url = "https://github.com/GitHub-hai/crypto-tool"
+        ttk.Button(status_frame, text="About",
+                   command=self._show_about,
+                   width=8).pack(side="right", padx=(0, 3), pady=1)
+        gh_link = ttk.Label(
+            status_frame,
+            text=github_url,
+            foreground="#0366d6", cursor="hand2",
+            font=("Consolas", 8, "underline"),
+        )
+        gh_link.pack(side="right", padx=(0, 8))
+        gh_link.bind("<Button-1>", lambda e: webbrowser.open(github_url))
+
+        # Notebook (tabs) — fills remaining space above status bar
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill="both", expand=True, padx=5, pady=(5, 0))
 
@@ -140,29 +165,6 @@ class CryptoGUI:
         self._create_asymmetric_tab()
         self._create_hash_tab()
         self._create_encode_tab()
-
-        # Status bar
-        status_frame = ttk.Frame(self.root)
-        status_frame.pack(fill="x", side="bottom")
-
-        self._status_var = tk.StringVar(value="Ready")
-        status_bar = ttk.Label(status_frame, textvariable=self._status_var,
-                               style="Status.TLabel")
-        status_bar.pack(side="left", fill="x", expand=True)
-
-        # GitHub link (clickable)
-        github_url = "https://github.com/GitHub-hai/crypto-tool"
-        link_btn = ttk.Label(
-            status_frame,
-            text="  GitHub: " + github_url + "  ",
-            foreground="#0366d6", cursor="hand2",
-            font=("Consolas", 8, "underline"),
-        )
-        link_btn.pack(side="left", padx=5)
-        link_btn.bind("<Button-1>", lambda e: webbrowser.open(github_url))
-
-        ttk.Button(status_frame, text="About", command=self._show_about,
-                   width=8).pack(side="right", padx=3, pady=1)
 
     # ── Helper Methods ──────────────────────────────────────────────────
 
@@ -285,26 +287,32 @@ class CryptoGUI:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Symmetric")
 
-        # Algorithm selection
+        # Control area — wraps on narrow windows
         ctrl_frame = ttk.Frame(tab)
         ctrl_frame.pack(fill="x", padx=5, pady=5)
 
-        ttk.Label(ctrl_frame, text="Algorithm:").pack(side="left", padx=(0, 5))
+        # Row 0: Algorithm
+        ttk.Label(ctrl_frame, text="Algorithm:").grid(row=0, column=0, sticky="w", padx=(0, 5), pady=2)
         self._sym_algo = tk.StringVar(value="SM4-ECB")
         algo_combo = ttk.Combobox(ctrl_frame, textvariable=self._sym_algo,
                                   values=["AES-GCM", "AES-CBC", "SM4-CBC", "SM4-ECB"],
                                   state="readonly", width=12)
-        algo_combo.pack(side="left", padx=(0, 15))
-
-        ttk.Label(ctrl_frame, text="Key File:").pack(side="left", padx=(0, 5))
-        self._sym_key_var = tk.StringVar()
-        ttk.Entry(ctrl_frame, textvariable=self._sym_key_var, width=40).pack(side="left", padx=2)
-        ttk.Button(ctrl_frame, text="Browse",
-                   command=lambda: self._browse_file(self._sym_key_var)).pack(side="left", padx=2)
-        ttk.Button(ctrl_frame, text="Generate",
-                   command=self._gen_sym_key).pack(side="left", padx=2)
+        algo_combo.grid(row=0, column=1, sticky="w", padx=(0, 15), pady=2)
         self._sym_use_pwd = tk.BooleanVar(value=False)
-        ttk.Checkbutton(ctrl_frame, text="Password", variable=self._sym_use_pwd).pack(side="left", padx=(10, 0))
+        ttk.Checkbutton(ctrl_frame, text="Password", variable=self._sym_use_pwd).grid(
+            row=0, column=2, sticky="w", padx=(10, 0), pady=2)
+
+        # Row 1: Key File
+        ttk.Label(ctrl_frame, text="Key File:").grid(row=1, column=0, sticky="w", padx=(0, 5), pady=2)
+        self._sym_key_var = tk.StringVar()
+        ttk.Entry(ctrl_frame, textvariable=self._sym_key_var).grid(
+            row=1, column=1, columnspan=2, sticky="ew", padx=2, pady=2)
+        ttk.Button(ctrl_frame, text="Browse",
+                   command=lambda: self._browse_file(self._sym_key_var)).grid(row=1, column=3, padx=2, pady=2)
+        ttk.Button(ctrl_frame, text="Generate",
+                   command=self._gen_sym_key).grid(row=1, column=4, padx=2, pady=2)
+
+        ctrl_frame.columnconfigure(1, weight=1)
 
         # Input area
         input_frame, self._sym_input = self._make_input_frame(tab, "Input (Plaintext / Ciphertext)")
@@ -623,11 +631,11 @@ class CryptoGUI:
         ctrl_frame = ttk.Frame(tab)
         ctrl_frame.pack(fill="x", padx=5, pady=5)
 
-        ttk.Label(ctrl_frame, text="Algorithm:").pack(side="left", padx=(0, 5))
+        ttk.Label(ctrl_frame, text="Algorithm:").grid(row=0, column=0, sticky="w", padx=(0, 5))
         self._asym_algo = tk.StringVar(value="RSA")
         ttk.Combobox(ctrl_frame, textvariable=self._asym_algo,
                      values=["RSA", "SM2"], state="readonly",
-                     width=8).pack(side="left", padx=(0, 15))
+                     width=8).grid(row=0, column=1, sticky="w", padx=(0, 15))
 
         # Key rows
         key_frame = ttk.Frame(tab)
@@ -899,37 +907,43 @@ class CryptoGUI:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Hash")
 
+        # Control area — wraps on narrow windows
         ctrl_frame = ttk.Frame(tab)
         ctrl_frame.pack(fill="x", padx=5, pady=5)
 
-        ttk.Label(ctrl_frame, text="Algorithm:").pack(side="left", padx=(0, 5))
+        # Row 0: Algorithm + HMAC checkbox
+        ttk.Label(ctrl_frame, text="Algorithm:").grid(row=0, column=0, sticky="w", padx=(0, 5), pady=2)
         self._hash_algo = tk.StringVar(value="SHA256")
         algo_combo = ttk.Combobox(ctrl_frame, textvariable=self._hash_algo,
                                   values=["SM3", "SM3+SALT", "MD5", "SHA1", "SHA256", "SHA384", "SHA512"],
                                   state="readonly", width=10)
-        algo_combo.pack(side="left")
+        algo_combo.grid(row=0, column=1, sticky="w", pady=2)
         algo_combo.bind("<<ComboboxSelected>>", self._on_hash_algo_changed)
-
-        # Salt input row (shown only for SM3+SALT)
-        self._hash_salt_label = ttk.Label(ctrl_frame, text="Salt:")
-        self._hash_salt = tk.StringVar()
-        self._hash_salt_entry = ttk.Entry(ctrl_frame, textvariable=self._hash_salt, width=20)
-        self._hash_salt_help = ttk.Label(ctrl_frame, text="(prepended: SM3(salt+data))", foreground="gray")
 
         self._hash_hmac = tk.BooleanVar(value=False)
         self._hash_hmac_cb = ttk.Checkbutton(ctrl_frame, text="HMAC Mode",
                                               variable=self._hash_hmac,
                                               command=self._toggle_hmac_key)
-        self._hash_hmac_cb.pack(side="left", padx=15)
+        self._hash_hmac_cb.grid(row=0, column=2, sticky="w", padx=(10, 0), pady=2)
+
+        # Row 1: Salt (shown only for SM3+SALT)
+        self._hash_salt_label = ttk.Label(ctrl_frame, text="Salt:")
+        self._hash_salt = tk.StringVar()
+        self._hash_salt_entry = ttk.Entry(ctrl_frame, textvariable=self._hash_salt)
+        self._hash_salt_help = ttk.Label(ctrl_frame, text="(prepended: SM3(salt+data))", foreground="gray")
+
+        # Row 1: HMAC Key (shown only for HMAC mode)
         self._hash_hmac_key_label = ttk.Label(ctrl_frame, text="HMAC Key:")
         self._hash_hmac_key = tk.StringVar()
-        self._hash_hmac_key_entry = ttk.Entry(ctrl_frame, textvariable=self._hash_hmac_key, width=30)
+        self._hash_hmac_key_entry = ttk.Entry(ctrl_frame, textvariable=self._hash_hmac_key)
         self._hash_hmac_key_btn = ttk.Button(ctrl_frame, text="Browse",
                                               command=lambda: self._browse_file(self._hash_hmac_key))
         # Hidden by default (HMAC Mode unchecked)
 
+        ctrl_frame.columnconfigure(1, weight=1)
+
         # Input
-        in_frame, self._hash_input = self._make_input_frame(tab, "Input Data", height=14)
+        in_frame, self._hash_input = self._make_input_frame(tab, "Input Data", height=10)
         in_frame.pack(fill="both", expand=True, padx=5, pady=3)
 
         in_toolbar = ttk.Frame(tab)
@@ -954,26 +968,32 @@ class CryptoGUI:
         out_frame.pack(fill="both", expand=True, padx=5, pady=3)
 
     def _toggle_hmac_key(self):
-        """Show/hide HMAC Key field based on HMAC Mode checkbox."""
+        """Show/hide HMAC Key field. Hides salt row if shown."""
         if self._hash_hmac.get():
-            self._hash_hmac_key_label.pack(side="left", padx=(0, 5))
-            self._hash_hmac_key_entry.pack(side="left", padx=2)
-            self._hash_hmac_key_btn.pack(side="left", padx=2)
+            self._hash_salt_label.grid_forget()
+            self._hash_salt_entry.grid_forget()
+            self._hash_salt_help.grid_forget()
+            self._hash_hmac_key_label.grid(row=1, column=0, sticky="w", padx=(0, 5), pady=2)
+            self._hash_hmac_key_entry.grid(row=1, column=1, columnspan=2, sticky="ew", padx=2, pady=2)
+            self._hash_hmac_key_btn.grid(row=1, column=3, padx=2, pady=2)
         else:
-            self._hash_hmac_key_label.pack_forget()
-            self._hash_hmac_key_entry.pack_forget()
-            self._hash_hmac_key_btn.pack_forget()
+            self._hash_hmac_key_label.grid_forget()
+            self._hash_hmac_key_entry.grid_forget()
+            self._hash_hmac_key_btn.grid_forget()
 
     def _on_hash_algo_changed(self, event=None):
-        """Show/hide salt input based on algorithm selection."""
+        """Show/hide salt input. Hides HMAC key row if shown."""
         if self._hash_algo.get() == "SM3+SALT":
-            self._hash_salt_label.pack(side="left", padx=(10, 2))
-            self._hash_salt_entry.pack(side="left", padx=2)
-            self._hash_salt_help.pack(side="left", padx=2)
+            self._hash_hmac_key_label.grid_forget()
+            self._hash_hmac_key_entry.grid_forget()
+            self._hash_hmac_key_btn.grid_forget()
+            self._hash_salt_label.grid(row=1, column=0, sticky="w", padx=(0, 5), pady=2)
+            self._hash_salt_entry.grid(row=1, column=1, columnspan=2, sticky="ew", padx=2, pady=2)
+            self._hash_salt_help.grid(row=1, column=3, sticky="w", padx=2, pady=2)
         else:
-            self._hash_salt_label.pack_forget()
-            self._hash_salt_entry.pack_forget()
-            self._hash_salt_help.pack_forget()
+            self._hash_salt_label.grid_forget()
+            self._hash_salt_entry.grid_forget()
+            self._hash_salt_help.grid_forget()
 
     def _compute_hash(self):
         """Compute hash or HMAC of input data."""
@@ -1018,14 +1038,14 @@ class CryptoGUI:
         ctrl_frame = ttk.Frame(tab)
         ctrl_frame.pack(fill="x", padx=5, pady=5)
 
-        ttk.Label(ctrl_frame, text="Operation:").pack(side="left", padx=(0, 5))
+        ttk.Label(ctrl_frame, text="Operation:").grid(row=0, column=0, sticky="w", padx=(0, 5))
         self._enc_op = tk.StringVar(value="Base64 Encode")
         ttk.Combobox(ctrl_frame, textvariable=self._enc_op,
                      values=["Base64 Encode", "Base64 Decode", "Hex Encode", "Hex Decode"],
-                     state="readonly", width=16).pack(side="left")
+                     state="readonly", width=16).grid(row=0, column=1, sticky="w")
 
         # Input
-        in_frame, self._enc_input = self._make_input_frame(tab, "Input", height=14)
+        in_frame, self._enc_input = self._make_input_frame(tab, "Input", height=10)
         in_frame.pack(fill="both", expand=True, padx=5, pady=3)
 
         in_toolbar = ttk.Frame(tab)
@@ -1038,7 +1058,7 @@ class CryptoGUI:
                    command=lambda: self._clear_text(self._enc_input)).pack(side="left", padx=2)
 
         # Output
-        out_frame, self._enc_output = self._make_input_frame(tab, "Output", height=14)
+        out_frame, self._enc_output = self._make_input_frame(tab, "Output", height=10)
         out_frame.pack(fill="both", expand=True, padx=5, pady=3)
 
         out_toolbar = ttk.Frame(tab)

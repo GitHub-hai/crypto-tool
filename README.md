@@ -152,6 +152,8 @@ crypto-tool/
 │   ├── test_cipher.py            # AES, SM4, RSA tests
 │   ├── test_sm_cipher.py         # SM2 tests
 │   └── test_hash.py              # SM3, SHA, HMAC tests
+├── run_gui.py                    # PyInstaller launcher for GUI
+├── run_cli.py                    # PyInstaller launcher for CLI
 ├── .gitignore
 ├── LICENSE                       # MIT
 ├── README.md
@@ -177,13 +179,15 @@ The GUI (`crypto-tool-gui`) can be packaged into a single-file executable for di
 pip install pyinstaller
 ```
 
+> **Important**: Use the launcher scripts (`run_gui.py`, `run_cli.py`) — they import via the package so relative imports resolve correctly. Running `crypto_tool/gui.py` directly will fail with `ImportError: attempted relative import with no known parent package`.
+
 ### Windows (.exe)
 
 ```bash
 # Single-file executable (no console window)
 pyinstaller --onefile --windowed ^
     --name crypto-tool ^
-    crypto_tool/gui.py
+    run_gui.py
 
 # Output: dist/crypto-tool.exe
 ```
@@ -194,10 +198,8 @@ With an icon (optional):
 pyinstaller --onefile --windowed ^
     --name crypto-tool ^
     --icon icon.ico ^
-    crypto_tool/gui.py
+    run_gui.py
 ```
-
-> **Note**: PyInstaller automatically follows Python imports to bundle the `crypto_tool` package. No `--add-data` is needed for `.py` modules.
 
 ### Linux
 
@@ -205,7 +207,7 @@ pyinstaller --onefile --windowed ^
 # Single-file executable
 pyinstaller --onefile \
     --name crypto-tool \
-    crypto_tool/gui.py
+    run_gui.py
 
 # Output: dist/crypto-tool
 ```
@@ -215,7 +217,7 @@ pyinstaller --onefile \
 ```bash
 pyinstaller --onefile --windowed \
     --name crypto-tool \
-    crypto_tool/gui.py
+    run_gui.py
 
 # Output: dist/crypto-tool.app (bundle) + dist/crypto-tool (binary)
 ```
@@ -227,7 +229,7 @@ To package the CLI instead of the GUI, omit `--windowed`:
 ```bash
 pyinstaller --onefile \
     --name crypto-tool-cli \
-    crypto_tool/cli.py
+    run_cli.py
 ```
 
 ### Output Location

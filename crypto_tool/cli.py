@@ -40,6 +40,17 @@ from .cipher import (
     from_hex,
     to_base64,
     from_base64,
+    # ChaCha20
+    chacha20_encrypt,
+    chacha20_decrypt,
+    # Ed25519
+    generate_ed25519_keypair,
+    ed25519_sign,
+    ed25519_verify,
+    serialize_ed25519_private_key,
+    serialize_ed25519_public_key,
+    load_ed25519_private_key_from_pem,
+    load_ed25519_public_key_from_pem,
 )
 from .sm_cipher import (
     generate_sm2_keypair,
@@ -368,6 +379,115 @@ def sm4_decrypt(mode, key_file, output, in_fmt, input_file, text, use_stdin):
     _resolve_output(output, plaintext)
     if output:
         click.echo(f"Decrypted ({format_bytes(len(data))} → {format_bytes(len(plaintext))})")
+
+
+# ── ChaCha20-Poly1305 Encryption/Decryption ─────────────────────────────
+
+@main.group("chacha20")
+def chacha20_group():
+    """ChaCha20-Poly1305 authenticated encryption."""
+    pass
+
+
+@chacha20_group.command("encrypt")
+@click.option("-k", "--key-file", required=True, help="File containing the 32-byte key.")
+@click.option("-o", "--output", default=None, help="Output file (stdout if omitted).")
+@click.option("--format", "out_fmt", type=click.Choice(["base64", "hex"]), default="base64",
+              help="Output encoding format.")
+@_input_options
+def chacha20_encrypt_cmd(key_file, output, out_fmt, input_file, text, use_stdin):
+    """Encrypt data using ChaCha20-Poly1305."""
+    plaintext = _resolve_input(input_file, text, use_stdin)
+    if plaintext is None:
+        raise click.UsageError("No input provided.")
+    key = read_file(key_file)
+    nonce, ciphertext, tag = chacha20_encrypt(plaintext, key)
+    packaged = nonce + tag + ciphertext
+    output_data = to_hex(packaged).encode("ascii") if out_fmt == "hex" else to_base64(packaged).encode("ascii")
+    _resolve_output(output, output_data)
+    if output:
+        click.echo(f"Encrypted ({format_bytes(len(plaintext))} → {format_bytes(len(packaged))}) using ChaCha20-Poly1305")
+
+
+@chacha20_group.command("decrypt")
+@click.option("-k", "--key-file", required=True, help="File containing the 32-byte key.")
+@click.option("-o", "--output", default=None, help="Output file (stdout if omitted).")
+@click.option("--input-format", "in_fmt", type=click.Choice(["base64", "hex"]), default="base64",
+              help="Input encoding format.")
+@_input_options
+def chacha20_decrypt_cmd(key_file, output, in_fmt, input_file, text, use_stdin):
+    """Decrypt data using ChaCha20-Poly1305."""
+    encoded_data = _resolve_input(input_file, text, use_stdin)
+    if encoded_data is None:
+        raise click.UsageError("No input provided.")
+    raw = encoded_data.decode("ascii") if isinstance(encoded_data, bytes) else encoded_data
+    data = from_hex(raw) if in_fmt == "hex" else from_base64(raw)
+    key = read_file(key_file)
+    if len(data) < 28:
+        raise click.UsageError("Ciphertext too short.")
+    nonce, tag, ciphertext = data[:12], data[12:28], data[28:]
+    plaintext = chacha20_decrypt(nonce, ciphertext, tag, key)
+    if plaintext is None:
+        click.echo("Error: Authentication failed. Wrong key or corrupted data.", err=True)
+        sys.exit(1)
+    _resolve_output(output, plaintext)
+    if output:
+        click.echo(f"Decrypted ({format_bytes(len(data))} → {format_bytes(len(plaintext))})")
+
+
+# ── Ed25519 Signatures ──────────────────────────────────────────────────
+
+@main.group("ed25519")
+def ed25519_group():
+    """Ed25519 digital signatures (signature-only, no encryption)."""
+    pass
+
+
+@ed25519_group.command("gen-key")
+@click.option("--private-out", default="ed25519_private.pem", help="Output file for private key.")
+@click.option("--public-out", default="ed25519_public.pem", help="Output file for public key.")
+def ed25519_gen_key(private_out, public_out):
+    """Generate an Ed25519 key pair."""
+    priv, pub = generate_ed25519_keypair()
+    write_file(private_out, serialize_ed25519_private_key(priv))
+    write_file(public_out, serialize_ed25519_public_key(pub))
+    click.echo(f"Ed25519 key pair generated:\n  Private: {private_out}\n  Public:  {public_out}")
+
+
+@ed25519_group.command("sign")
+@click.option("-k", "--key-file", required=True, help="Private key file (PEM).")
+@click.option("-o", "--output", default=None, help="Output file for signature.")
+@_input_options
+def ed25519_sign_cmd(key_file, output, input_file, text, use_stdin):
+    """Sign data using Ed25519."""
+    data = _resolve_input(input_file, text, use_stdin)
+    if data is None:
+        raise click.UsageError("No input provided.")
+    private_key = load_ed25519_private_key_from_pem(read_file(key_file))
+    signature = ed25519_sign(data, private_key)
+    sig_output = to_base64(signature).encode("ascii")
+    _resolve_output(output, sig_output)
+    if output:
+        click.echo(f"Signed. Signature: {format_bytes(len(signature))}")
+
+
+@ed25519_group.command("verify")
+@click.option("-k", "--key-file", required=True, help="Public key file (PEM).")
+@click.option("-s", "--signature", "sig_file", required=True, help="Signature file.")
+@_input_options
+def ed25519_verify_cmd(key_file, sig_file, input_file, text, use_stdin):
+    """Verify an Ed25519 signature."""
+    data = _resolve_input(input_file, text, use_stdin)
+    if data is None:
+        raise click.UsageError("No input provided.")
+    public_key = load_ed25519_public_key_from_pem(read_file(key_file))
+    sig_b64 = read_file(sig_file, binary=False).strip()
+    signature = from_base64(sig_b64)
+    if ed25519_verify(data, signature, public_key):
+        click.echo("✓ Signature is valid.")
+    else:
+        click.echo("✗ Signature is INVALID.", err=True)
+        sys.exit(1)
 
 
 # ── RSA Encryption/Decryption ───────────────────────────────────────────

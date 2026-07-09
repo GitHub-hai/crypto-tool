@@ -15,8 +15,8 @@ A versatile encryption/decryption utility for Python with both CLI and GUI inter
 
 | Category | Algorithms | Standard |
 |----------|-----------|----------|
-| **Symmetric** | AES (CBC, GCM), SM4 (CBC, ECB) | FIPS 197, GM/T 0002 |
-| **Asymmetric** | RSA (OAEP, PSS), SM2 | PKCS#1, GM/T 0003 |
+| **Symmetric** | AES (CBC, GCM), SM4 (CBC, ECB), ChaCha20-Poly1305 | FIPS 197, GM/T 0002, RFC 8439 |
+| **Asymmetric** | RSA (OAEP, PSS), SM2, Ed25519 | PKCS#1, GM/T 0003, RFC 8032 |
 | **Hash** | SM3, SM3+SALT, SHA-256/384/512, MD5, SHA1 | GM/T 0004, FIPS 180-4 |
 | **HMAC** | HMAC-SM3, HMAC-SHA256/384/512 | RFC 2104 |
 | **KDF** | PBKDF2-HMAC-SHA256 | RFC 2898 |
@@ -74,6 +74,15 @@ crypto-tool rsa verify -k public.pem -i document.pdf -s doc.sig
 crypto-tool sm2 sign -k sm2_private.key --public-key sm2_public.key -i data.txt -o data.sig
 crypto-tool sm2 verify -k sm2_public.key -i data.txt -s data.sig
 
+# ChaCha20-Poly1305 (modern stream cipher)
+crypto-tool chacha20 encrypt -k chacha.key -t "secret" -o encrypted.bin
+crypto-tool chacha20 decrypt -k chacha.key -i encrypted.bin
+
+# Ed25519 (modern signature-only, no encryption)
+crypto-tool ed25519 gen-key
+crypto-tool ed25519 sign -k ed25519_private.pem -i document.pdf -o doc.sig
+crypto-tool ed25519 verify -k ed25519_public.pem -i document.pdf -s doc.sig
+
 # Hashing
 crypto-tool hash digest -a sm3 -i file.txt
 crypto-tool hash digest -a sm3 -s "mysalt" -t "hello world"   # SM3+SALT
@@ -100,8 +109,8 @@ crypto-tool-gui
 ```
 
 A 4-tab window opens:
-- **Symmetric** — AES-GCM/CBC, SM4-CBC/ECB with key generation
-- **Asymmetric** — RSA, SM2 encrypt/decrypt/sign/verify
+- **Symmetric** — AES-GCM/CBC, SM4-CBC/ECB, ChaCha20-Poly1305
+- **Asymmetric** — RSA, SM2, Ed25519 (encrypt/decrypt/sign/verify)
 - **Hash** — SM3, SM3+SALT, SHA, MD5, HMAC
 - **Encode** — Base64, Hex encode/decode
 
@@ -133,6 +142,18 @@ from crypto_tool.sm_cipher import generate_sm2_keypair, sm2_encrypt, sm2_decrypt
 priv, pub = generate_sm2_keypair()
 ct = sm2_encrypt(b"message", pub)
 pt = sm2_decrypt(ct, priv)
+
+# ChaCha20-Poly1305
+from crypto_tool.cipher import chacha20_encrypt, chacha20_decrypt
+key = generate_aes_key(256)
+nonce, ct, tag = chacha20_encrypt(b"data", key)
+pt = chacha20_decrypt(nonce, ct, tag, key)
+
+# Ed25519 (signature-only)
+from crypto_tool.cipher import generate_ed25519_keypair, ed25519_sign, ed25519_verify
+priv, pub = generate_ed25519_keypair()
+sig = ed25519_sign(b"message", priv)
+assert ed25519_verify(b"message", sig, pub)
 ```
 
 ## Project Structure

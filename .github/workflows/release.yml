@@ -24,9 +24,17 @@ jobs:
     - name: Sync version from tag
       shell: bash
       run: |
-        VERSION="${GITHUB_REF_NAME#v}"
-        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" crypto_tool/__init__.py
-        echo "Version: $VERSION"
+        cat > /tmp/sync_version.py << 'PYEOF'
+        import re, sys
+        tag = sys.argv[1]
+        with open("crypto_tool/__init__.py") as f:
+            content = f.read()
+        content = re.sub(r'__version__ = "[^"]*"', f'__version__ = "{tag}"', content)
+        with open("crypto_tool/__init__.py", "w") as f:
+            f.write(content)
+        print(f"Version synced: {tag}")
+        PYEOF
+        python /tmp/sync_version.py ${GITHUB_REF_NAME#v}
 
     - name: Install dependencies
       run: |

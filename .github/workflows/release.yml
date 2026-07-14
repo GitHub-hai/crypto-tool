@@ -50,8 +50,9 @@ jobs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        pyinstaller --onefile --windowed --name crypto-tool --hidden-import tkinter run_gui.py
-        # Distribute .app bundle for native macOS experience
+        # tkinter is not bundled with CI Python on macOS
+        brew install python-tk@3.11 2>/dev/null || true
+        pyinstaller --onefile --windowed --name crypto-tool --hidden-import tkinter --hidden-import _tkinter run_gui.py
         cd dist
         zip -r crypto-tool-macos.zip crypto-tool.app
         echo "ASSET=dist/crypto-tool-macos.zip" >> $GITHUB_ENV

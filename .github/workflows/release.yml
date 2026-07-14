@@ -50,8 +50,11 @@ jobs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        pyinstaller --onefile --name crypto-tool --hidden-import tkinter run_gui.py
-        echo "ASSET=dist/crypto-tool" >> $GITHUB_ENV
+        pyinstaller --onefile --windowed --name crypto-tool --hidden-import tkinter run_gui.py
+        # Distribute .app bundle for native macOS experience
+        cd dist
+        zip -r crypto-tool-macos.zip crypto-tool.app
+        echo "ASSET=dist/crypto-tool-macos.zip" >> $GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -76,8 +79,8 @@ jobs:
       run: |
         mkdir dist
         cp artifacts/crypto-tool-windows-latest/crypto-tool.exe dist/
-        cp artifacts/crypto-tool-ubuntu-latest/crypto-tool dist/crypto-tool-linux
-        cp artifacts/crypto-tool-macos-latest/crypto-tool dist/crypto-tool-macos
+        cp artifacts/crypto-tool-ubuntu-latest/crypto-tool dist/
+        cp artifacts/crypto-tool-macos-latest/crypto-tool-macos.zip dist/
 
     - name: Create Release
       uses: softprops/action-gh-release@v1

@@ -44,10 +44,8 @@ from .cipher import (
     load_ed25519_private_key_from_pem,
     load_ed25519_public_key_from_pem,
     hash_data,
-    sm3_hash,
     sm3_salted_hash,
     hmac_sign,
-    derive_key,
     to_hex,
     from_hex,
     to_base64,
@@ -63,7 +61,7 @@ from .sm_cipher import (
     load_sm2_public_key_from_pem,
     load_sm2_private_key_from_pem,
 )
-from .utils import copy_to_clipboard, format_bytes
+from .utils import copy_to_clipboard
 
 
 class CryptoGUI:
@@ -756,7 +754,7 @@ class CryptoGUI:
                     f.write(pub_pem)
                 self._asym_pub_var.set(pub_path)
 
-            self._set_status(f"Generated RSA-2048 key pair")
+            self._set_status("Generated RSA-2048 key pair")
         elif algo == "SM2":
             priv_hex, pub_hex = generate_sm2_keypair()
             priv_pem, pub_pem = sm2_keypair_to_pem(priv_hex, pub_hex)
@@ -777,7 +775,7 @@ class CryptoGUI:
                     f.write(pub_pem)
                 self._asym_pub_var.set(pub_path)
 
-            self._set_status(f"Generated SM2 key pair")
+            self._set_status("Generated SM2 key pair")
         else:  # Ed25519
             priv, pub = generate_ed25519_keypair()
             priv_pem = serialize_ed25519_private_key(priv)
@@ -799,7 +797,7 @@ class CryptoGUI:
                     f.write(pub_pem)
                 self._asym_pub_var.set(pub_path)
 
-            self._set_status(f"Generated Ed25519 key pair")
+            self._set_status("Generated Ed25519 key pair")
 
     def _load_pub_key(self):
         """Load the public key from the configured file."""
@@ -1213,7 +1211,7 @@ def main():
     """Entry point for the GUI application."""
     _enable_high_dpi()
     root = tk.Tk()
-    app = CryptoGUI(root)
+    CryptoGUI(root)
     root.mainloop()
 
 

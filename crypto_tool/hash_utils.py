@@ -6,7 +6,6 @@ All other algorithms use Python's built-in `hashlib`.
 """
 
 import hashlib
-from typing import Optional
 from cryptography.hazmat.primitives.hashes import Hash, SM3
 
 
@@ -105,8 +104,6 @@ def hmac_sign(data: bytes, key: bytes, algorithm: str = "sha256") -> str:
 
 def _hmac_sm3(data: bytes, key: bytes) -> str:
     """Compute HMAC-SM3 (RFC 2104 compatible)."""
-    import hmac as hmac_mod
-    import copy
 
     block_size = 64  # SM3 block size is 64 bytes
 

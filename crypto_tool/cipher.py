@@ -9,8 +9,6 @@ Supported algorithms:
 """
 
 import os
-import base64
-import hashlib
 from typing import Tuple, Optional
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -29,7 +27,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidTag, InvalidSignature
 
 # Re-export hash utilities for backward compatibility
-from .hash_utils import (
+from .hash_utils import (  # noqa: F401
     hash_data,
     sm3_hash,
     sm3_salted_hash,
@@ -41,6 +39,12 @@ from .hash_utils import (
     to_base64,
     from_base64,
 )
+
+__all__ = [
+    # Re-exports for backward compat
+    "hash_data", "sm3_hash", "sm3_salted_hash", "hmac_sign", "hmac_verify",
+    "derive_key", "to_hex", "from_hex", "to_base64", "from_base64",
+]
 
 
 # ── AES Symmetric Encryption ────────────────────────────────────────────

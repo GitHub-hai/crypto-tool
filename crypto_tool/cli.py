@@ -32,7 +32,6 @@ from .cipher import (
     sm4_decrypt_ecb,
     # Re-exports from hash_utils
     hash_data,
-    sm3_hash,
     sm3_salted_hash,
     hmac_sign,
     derive_key,
@@ -65,14 +64,10 @@ from .sm_cipher import (
 from .utils import (
     read_file,
     write_file,
-    ensure_dir,
-    file_exists,
-    get_file_size,
     prompt_password,
     format_bytes,
     is_pipe,
     get_stdin_data,
-    get_input_data,
 )
 
 
@@ -600,7 +595,7 @@ def sm2_gen_key(private_out, public_out):
     write_file(private_out, private_pem.encode("ascii"))
     write_file(public_out, public_pem.encode("ascii"))
 
-    click.echo(f"SM2 key pair generated:")
+    click.echo("SM2 key pair generated:")
     click.echo(f"  Private key: {private_out}")
     click.echo(f"  Public key:  {public_out}")
 

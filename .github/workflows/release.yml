@@ -21,6 +21,13 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Sync version from tag
+      shell: bash
+      run: |
+        VERSION="${GITHUB_REF_NAME#v}"
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" crypto_tool/__init__.py
+        echo "Version: $VERSION"
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
